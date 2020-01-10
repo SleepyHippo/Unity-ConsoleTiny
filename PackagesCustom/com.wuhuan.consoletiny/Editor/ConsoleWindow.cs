@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using UnityEngine;
 using UnityEditor;
@@ -179,7 +179,7 @@ namespace ConsoleTiny
         private int m_ActiveInstanceID = 0;
         bool m_DevBuild;
         private string[] m_SearchHistory = new[] { "" };
-        private double m_NextRepaint = double.MaxValue;
+        private long m_NextRepaint = long.MaxValue;
 
         SplitterState spl = new SplitterState(new float[] { 70, 30 }, new int[] { 32, 32 }, null);
 
@@ -190,6 +190,7 @@ namespace ConsoleTiny
         static internal Texture2D[] iconCustomFiltersSmalls;
 
         int ms_LVHeight = 0;
+        long m_StartTicks = 0;
 
 #if UNITY_2018_3_OR_NEWER
         class ConsoleAttachToPlayerState : GeneralConnectionState
@@ -296,7 +297,7 @@ namespace ConsoleTiny
             if (ms_ConsoleWindow == null)
                 return;
 
-            ms_ConsoleWindow.m_NextRepaint = EditorApplication.timeSinceStartup + 0.25f;
+            ms_ConsoleWindow.m_NextRepaint = DateTime.Now.Ticks + 2500;//0.25 millisecond
         }
 
         public ConsoleWindow()
@@ -309,6 +310,7 @@ namespace ConsoleTiny
 
         void OnEnable()
         {
+            m_StartTicks = DateTime.Now.Ticks;
 #if UNITY_2018_3_OR_NEWER
             if (m_ConsoleAttachToPlayerState == null)
                 m_ConsoleAttachToPlayerState = new ConsoleAttachToPlayerState(this);
@@ -357,11 +359,16 @@ namespace ConsoleTiny
                 ms_ConsoleWindow = null;
         }
 
+        public string GetActiveText()
+        {
+            return LogEntries.wrapped.getActiveText();
+        }
+
         void OnInspectorUpdate()
         {
-            if (EditorApplication.timeSinceStartup > m_NextRepaint)
+            if (DateTime.Now.Ticks > m_NextRepaint)
             {
-                m_NextRepaint = double.MaxValue;
+                m_NextRepaint = long.MaxValue;
                 Repaint();
             }
         }
@@ -810,6 +817,7 @@ namespace ConsoleTiny
 
         #region Stacktrace
 
+        string m_ActiveText = "";
         private void StacktraceListView(Event e, GUIContent tempContent)
         {
             float maxWidth = LogEntries.wrapped.StacktraceListView_GetMaxWidth(tempContent, Constants.MessageStyle);
